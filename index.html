@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logical – Rätsel-Trainer</title>
+<style>
+:root{
+  /* Farben nach flade.ch: Weiss als Grund, Anthrazit für Text, Limettengrün #aecb35 als Akzent */
+  --bg:#ffffff; --card:#f8faf0; --ink:#231f20; --muted:#5f6657;
+  --line:#d3dbbd; --thick:#231f20; --given:#231f20; --user:#46640f;
+  --sel:#dbe9a0; --peer:#f4f8e2; --same:#e7f0bd;
+  --ok:#15803d; --okbg:#dcfce7; --bad:#b91c1c; --badbg:#fee2e2;
+  --hint:#92400e; --hintbg:#fef3c7;
+  --accent:#aecb35; --accent-bg:#f1f7d9; --accent-dark:#5d7410; --lime:#aecb35;
+  --water:#e6f1f5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Calibri,"Segoe UI",Arial,sans-serif;}
+.wrap{max-width:980px;margin:0 auto;padding:16px;}
+
+/* Kopf */
+.top{display:flex;align-items:center;gap:16px;margin:2px 0 14px;padding-bottom:12px;border-bottom:3px solid var(--lime)}
+.logo{height:58px;width:auto;display:block;flex:none}
+.titlebox h1{margin:0;font-size:1.7rem;line-height:1.15}
+.sub{color:var(--muted);margin:2px 0 0}
+/* Layout */
+.layout{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.left{flex:1 1 420px;min-width:280px}
+.right{flex:0 1 300px;min-width:260px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border-radius:12px;padding:14px;border:1px solid var(--line);box-shadow:0 1px 3px rgba(35,31,32,.06)}
+.card h2{font-size:1.05rem;margin:0 0 8px}
+label.small{font-size:.9rem;color:var(--muted);display:block;margin-bottom:4px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.seg button{flex:1 1 auto;border:2px solid var(--line);background:#fff;border-radius:8px;padding:7px 8px;font:inherit;cursor:pointer;color:var(--ink)}
+.seg button.on{border-color:var(--accent);background:var(--accent-bg);font-weight:bold}
+.lvldesc{font-size:.9rem;color:var(--muted);min-height:2.4em;margin:0 0 10px}
+.btn{border:none;border-radius:8px;padding:9px 12px;font:inherit;cursor:pointer;background:#e5e7eb;color:var(--ink)}
+.btn:hover{filter:brightness(.95)}
+.btn.primary{background:var(--accent);color:var(--ink);font-weight:bold}
+.btn.primary:hover{background:#9db92d}
+.btn.on{background:var(--accent-dark);color:#fff}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns .full{grid-column:1/-1}
+.stats{display:flex;justify-content:space-between;font-size:.95rem;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.stats b{font-variant-numeric:tabular-nums}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+
+/* Spielfeld (gemeinsam) */
+.board{
+  width:min(100%,520px); aspect-ratio:1/1; margin:0 auto;
+  display:grid; grid-template-columns:repeat(var(--cols,var(--n)),1fr); grid-template-rows:repeat(var(--cols,var(--n)),1fr);
+  border:3px solid var(--thick); background:#fff; user-select:none; touch-action:manipulation;
+}
+.cell{
+  display:flex;align-items:center;justify-content:center;position:relative;
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-size:calc(min(100vw - 40px,520px) / var(--n) * .55);
+  cursor:pointer;color:var(--user);
+}
+.cell.tr{border-right:3px solid var(--thick)}
+.cell.tb{border-bottom:3px solid var(--thick)}
+.cell.lastc{border-right:none}
+.cell.lastr{border-bottom:none}
+.cell.water{background:var(--water)}
+.cell.peer{background:var(--peer)}
+.cell.same{background:var(--same)}
+.cell.sel{background:var(--sel)}
+.cell.given{color:var(--given);font-weight:bold}
+.cell.hint{color:var(--hint);background:var(--hintbg)}
+.cell.ok{color:var(--ok);background:var(--okbg)}
+.cell.bad{color:var(--bad);background:var(--badbg)}
+.cell.sel.ok,.cell.sel.bad,.cell.sel.hint{outline:3px solid var(--accent);outline-offset:-3px}
+.cell.water.ok,.cell.water.bad,.cell.water.hint{outline:0}
+.notes{position:absolute;inset:2px;display:grid;font-size:calc(min(100vw - 40px,520px) / var(--n) * .22);color:#64748b;line-height:1;font-weight:normal}
+.notes span{display:flex;align-items:center;justify-content:center}
+
+/* Eingabe */
+.pad{display:grid;gap:6px;margin:12px auto 0;width:min(100%,520px)}
+.pad button{font:inherit;font-size:1.4rem;padding:10px 0;border-radius:8px;border:2px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.pad button.del{font-size:1rem}
+.pad button.done{opacity:.35}
+.padhelp{margin:12px auto 0;width:min(100%,520px);font-size:.95rem;color:var(--muted);text-align:center}
+.msg{margin:12px auto 0;width:min(100%,520px);padding:10px 12px;border-radius:8px;display:none;font-size:1rem}
+.msg.show{display:block}
+.msg.info{background:#e0f2fe;color:#075985}
+.msg.good{background:var(--okbg);color:#14532d}
+.msg.warn{background:var(--badbg);color:#7f1d1d}
+.toggle{display:flex;gap:8px;align-items:center;font-size:.95rem;margin-top:6px;cursor:pointer}
+details summary{cursor:pointer;font-weight:bold}
+details ul{padding-left:18px;margin:8px 0 0}
+details li{margin-bottom:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;font-size:.85rem;margin-top:8px}
+.legend span{padding:2px 6px;border-radius:5px}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay.show{display:flex}
+.dialog{background:#fff;border-radius:14px;padding:22px;max-width:380px;width:100%;text-align:center}
+.dialog h3{margin:0 0 8px;font-size:1.5rem}
+.dialog p{margin:6px 0}
+.loading{opacity:.4;pointer-events:none}
+.printhead{display:none}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.pad button:disabled{opacity:.35;cursor:not-allowed}
+.toggle.off{opacity:.5;cursor:not-allowed}
+
+@media (max-width:520px){
+  .logo{height:46px}
+  .titlebox h1{font-size:1.4rem}
+}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
+  .right,.pad,.padhelp,.msg,.sub,.titlebox,.stats,.overlay{display:none!important}
+  .top{margin:0 0 8px}
+  .logo{height:1.3cm}
+  .printhead{display:block;margin-bottom:12px;font-size:1.2rem}
+  .board{width:16cm}
+  .cell{font-size:calc(16cm / var(--n) * .55)}
+  .cell.peer,.cell.same,.cell.sel{background:#fff}
+}
+
+/* Eingebettet in die Plattform: Kopf wird von der Plattform gezeigt */
+body.embed .top{display:none}
+body.embed .wrap{padding-top:0}
+@media print{body.embed .top{display:flex}}
+
+/* Kennzeichnung «Lösung angezeigt» */
+#stStatus.bad{color:var(--bad)}
+#stStatus.good{color:var(--ok)}
+.solbanner{display:none;background:#b91c1c;color:#fff;font-weight:bold;text-align:center;padding:8px 10px;border-radius:8px;margin-bottom:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#stage{position:relative}
+#stage.sol{outline:4px solid #b91c1c;outline-offset:2px}
+#stage.sol::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='170'><text x='130' y='90' text-anchor='middle' font-family='Arial' font-size='22' font-weight='bold' fill='%23b91c1c' fill-opacity='.38' transform='rotate(-25 130 85)'>LÖSUNG ANGEZEIGT</text></svg>") repeat;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* Logical */
+.lg h3{font-size:1.05rem;margin:0 0 6px}
+.lg h3.lg-h{margin:16px 0 6px}
+.lg-box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.lg-intro{margin:0 0 10px}
+.lg-clues{margin:0;padding-left:26px}
+.lg-clues li{margin-bottom:6px;line-height:1.35;cursor:pointer;white-space:pre-line}
+.lg-clues li.struck{color:#9aa38c;text-decoration:line-through}
+.lg-note{font-size:.85rem;color:var(--muted);margin:6px 0 6px}
+.lg-scroll{overflow-x:auto;padding-bottom:2px}
+.lg-table{border-collapse:collapse;width:100%;background:#fff;table-layout:fixed}
+.lg-table th,.lg-table td{border:1px solid var(--line);padding:6px 4px;text-align:center}
+.lg-table{border:3px solid var(--thick)}
+.lg-table th{background:var(--accent-bg);font-weight:bold}
+.lg-table th.lg-cat{width:24%;text-align:left;padding-left:8px;hyphens:auto;overflow-wrap:anywhere}
+.lg-table th.lg-corner{background:#fff}
+.lgc{height:44px;cursor:pointer;color:var(--user);font-weight:bold;overflow-wrap:anywhere;hyphens:auto;font-size:.95rem}
+.lgc.peer{background:var(--peer)}
+.lgc.sel{background:var(--sel);outline:3px solid var(--accent);outline-offset:-3px}
+.lgc.hint{color:var(--hint);background:var(--hintbg)}
+.lgc.ok{color:var(--ok);background:var(--okbg)}
+.lgc.bad{color:var(--bad);background:var(--badbg)}
+.lg-padhelp{margin:10px 0 6px;color:var(--muted);font-size:.95rem}
+.lg-padrow{display:flex;flex-wrap:wrap;gap:6px}
+.lg-padrow button{flex:1 1 auto;font:inherit;font-size:1rem;padding:10px 10px;border-radius:8px;border:2px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.lg-padrow button.used{opacity:.45}
+.lg-padrow button.on{border-color:var(--accent);background:var(--accent-bg);font-weight:bold}
+.lg-padrow button.del{flex:0 0 auto;color:var(--muted)}
+.lg-padslot{display:none}
+.lg-grid{border-collapse:collapse;background:#fff;font-size:.8rem}
+.lg-grid th{font-weight:normal;padding:2px 4px;border:1px solid var(--line);background:var(--card)}
+.lg-grid th.lg-corner{border:none;background:none}
+.lg-grid th.lg-gcat{font-weight:bold;background:var(--accent-bg)}
+.lg-grid th.lg-gv{vertical-align:bottom;padding:4px 0;height:1px}
+.lg-grid th.lg-gv span,.lg-grid th.lg-gcatv span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block}
+.lg-grid th.lg-gcatv{font-weight:bold;background:var(--accent-bg);padding:4px 2px}
+.lg-grid th.lg-gr{text-align:right;white-space:nowrap}
+.lg-grid td.lg-g{width:var(--gc);min-width:var(--gc);height:var(--gc);border:1px solid var(--line);text-align:center;cursor:pointer;font-size:1rem;font-weight:bold;padding:0;user-select:none}
+.lg-grid td.no{color:var(--bad)}
+.lg-grid td.yes{color:var(--ok);background:var(--okbg)}
+.lg-grid .bl{border-left:3px solid var(--thick)!important}
+.lg-grid .bt{border-top:3px solid var(--thick)!important}
+.lg-grid tr:last-child td,.lg-grid tr:last-child th{border-bottom:3px solid var(--thick)}
+.lg-grid td:last-child,.lg-grid th.lg-gcat:last-child,.lg-grid th.lg-gv:last-child{border-right:3px solid var(--thick)}
+.lg-grid tr:first-child th.lg-gcat{border-top:3px solid var(--thick)}
+.lg-grid th.lg-gcatv{border-left:3px solid var(--thick)}
+@media print{
+  .lgpad,.lg-note{display:none!important}
+  .lg-box{border:none;padding:0;background:#fff}
+  .lg-clues li{cursor:default}
+  .lg-clues li.struck{color:inherit;text-decoration:none}
+  .lgc.peer,.lgc.sel{background:#fff;outline:0}
+  .left{flex:1 1 100%}
+}
+
+
+.setup-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:260px;padding:28px 18px;text-align:center;border:2px dashed var(--line,#cbd5e1);border-radius:16px;background:#f8fafc;color:#334155}
+.setup-ph .big{font-size:40px;line-height:1}
+.setup-ph h3{margin:0;font-size:1.15rem}
+.setup-ph p{margin:0;max-width:34ch;font-size:.95rem}
+.setup-ph .chosen{font-weight:700;color:#0f172a}
+.setup-ph .btn{margin-top:6px;min-width:220px}
+
+body.setup-mode .left,body.setup-mode .right>.card:nth-child(n+2){display:none}
+body.setup-mode .right{flex:1 1 100%;max-width:520px;margin:18px auto 0}
+body.setup-mode .right>.card:first-child{padding:20px}
+body.setup-mode #btnNew{padding:14px;font-size:1.05rem}
+body:not(.setup-mode) .right>.card:first-child{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img class="logo" src="data:image/png;base64,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" alt="Logo">
+    <div class="titlebox">
+      <h1 id="gameTitle">Rätsel-Trainer</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+  </header>
+
+    <div class="layout">
+    <div class="left">
+      <div class="printhead"><span id="phTitle"></span> &nbsp;&nbsp; Name: ______________________</div>
+      <div class="stats">
+        <span>Niveau: <b id="stLevel">–</b></span>
+        <span>Zeit: <b id="stTime">00:00</b></span>
+        <span>Tipps: <b id="stTips">0</b></span>
+        <span style="display:none">Prüfungen: <b id="stChecks">0</b></span>
+        <span>Status: <b id="stStatus">in Arbeit</b></span>
+      </div>
+      <div id="solBanner" class="solbanner" role="alert">⚠ LÖSUNG ANGEZEIGT – dieses Rätsel zählt nicht als selbst gelöst</div>
+      <div id="stage"></div>
+      <div id="pad"></div>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2 id="newTitle">Neues Rätsel</h2>
+        <label class="small" id="sizeLbl">Grösse</label>
+        <div class="seg" id="sizeSeg"></div>
+        <label class="small">Niveau</label>
+        <div class="seg" id="lvlSeg"></div>
+        <p class="lvldesc" id="lvlDesc"></p>
+        <button class="btn primary" style="width:100%" id="btnNew">Neues Rätsel erstellen</button>
+      </div>
+
+      <div class="card">
+        <button class="btn" id="btnBack" style="width:100%;margin-bottom:10px">⚙ Neues Rätsel / Einstellungen ändern</button>
+        <h2>Werkzeuge</h2>
+        <div class="btns">
+          <button class="btn primary full" id="btnSubmit" disabled title="Erst alle Felder ausfüllen">📥 Abgeben</button>
+          <button class="btn full" id="btnCheck" style="display:none">✔ Überprüfen</button>
+          <button class="btn" id="btnNotes">✎ Notizen: aus</button>
+          <button class="btn" id="btnHint">💡 Tipp</button>
+          <button class="btn" id="btnReset">↺ Neu beginnen</button>
+          <button class="btn" id="btnSolve">Lösung zeigen</button>
+          <button class="btn full" id="btnPrint">🖨 Drucken</button>
+        </div>
+        <label class="toggle" style="display:none"><input type="checkbox" id="autoCheck"> Fehler sofort rot anzeigen</label>
+        <div class="legend">
+          <span style="background:var(--okbg);color:var(--ok)">richtig</span>
+          <span style="background:var(--badbg);color:var(--bad)">falsch</span>
+          <span style="background:var(--hintbg);color:var(--hint)">Tipp</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <details>
+          <summary id="rulesTitle">So geht's</summary>
+          <ul id="rules"></ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <h3 id="winTitle">🎉 Geschafft!</h3>
+    <p id="winText"></p>
+    <p id="winTip" style="font-size:.9rem;color:var(--muted)">Tipp: Mach einen Screenshot für dein Lernjournal.</p>
+    <button class="btn primary" id="btnWinNew" style="margin-top:10px">Nächstes Rätsel</button>
+    <button class="btn" id="btnWinClose" style="margin-top:10px">Schliessen</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   KERN – gemeinsam für alle Rätsel (wird in jede Rätsel-Datei eingebaut)
+   Enthält: Hilfsfunktionen und die Basisklasse GridPuzzle.
+   Ein Rätsel erbt von GridPuzzle und meldet sich mit  const GAME = {...}  an.
+   ===================================================================== */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randOf(a){return a[Math.floor(Math.random()*a.length)];}
+const LEVEL_NAMES={sl:'Sehr leicht',l:'Leicht',m:'Mittel',s:'Schwer',ss:'Sehr schwer',us:'Ultraschwer'};
+
+class GridPuzzle{
+  constructor(def,size,lvlKey,data){
+    this.def=def; this.n=size; this.lvlKey=lvlKey;
+    this.sol=data.sol; this.cur=data.puz.slice();
+    this.given=data.puz.map(v=>v>0);
+    this.hinted=new Array(size*size).fill(false);
+    this.mark=new Array(size*size).fill(0);          // 0 nichts, 1 richtig, 2 falsch
+    this.sel=-1; this.done=false; this.locked=false; this.cells=[]; this.ctx=null;
+  }
+
+  /* --- Hooks, die Unterklassen überschreiben --- */
+  baseClass(i){return 'cell';}
+  extraClass(i){return i===this.sel?' sel':'';}
+  paint(i,d){}                                       // Zelleninhalt zeichnen
+  onCell(i){this.sel=i;this.refresh();}
+  handleKey(e){return false;}
+  buildPad(pad){pad.className='padhelp';pad.textContent=this.def.padHelp||'';}
+  afterSet(i,v){}
+  afterReset(){}
+  afterRefresh(){}
+  cellState(i){const v=this.cur[i];if(!v)return 'empty';return v===this.sol[i]?'right':'wrong';}
+  solved(){return this.cur.every((v,k)=>v===this.sol[k]);}
+  pickHint(){
+    const open=[];
+    for(let i=0;i<this.cur.length;i++)if(!this.given[i]&&this.cur[i]!==this.sol[i])open.push(i);
+    if(!open.length)return null;
+    const i=(this.sel>=0&&open.includes(this.sel))?this.sel:randOf(open);
+    return {i,text:'Ein Feld wurde mit einem Tipp ausgefüllt (gelb).'};
+  }
+  revealEmpty(i){this.hinted[i]=true;}
+
+  /* --- gemeinsame Abläufe --- */
+  buildBoard(){
+    const b=document.createElement('div');
+    b.className='board g-'+this.def.id;
+    b.style.setProperty('--n',this.n);
+    b.setAttribute('aria-label',this.def.name+'-Feld');
+    this.cells=[];
+    for(let i=0;i<this.n*this.n;i++){
+      const d=document.createElement('div');
+      d.addEventListener('click',()=>this.onCell(i));
+      b.appendChild(d);this.cells.push(d);
+    }
+    return b;
+  }
+  mount(ctx,stage,pad){
+    this.ctx=ctx;
+    stage.innerHTML='';
+    stage.appendChild(this.buildBoard());
+    pad.className='';pad.removeAttribute('style');pad.innerHTML='';
+    this.buildPad(pad);
+    this.refresh();
+  }
+  refresh(){
+    for(let i=0;i<this.cur.length;i++){
+      const d=this.cells[i];
+      let cls=this.baseClass(i);
+      if(this.given[i])cls+=' given';
+      if(this.hinted[i])cls+=' hint';
+      if(this.mark[i]===1)cls+=' ok';
+      if(this.mark[i]===2)cls+=' bad';
+      cls+=this.extraClass(i);
+      d.className=cls;
+      this.paint(i,d);
+    }
+    this.afterRefresh();
+  }
+  commit(){this.ctx.hideMsg();this.refresh();this.ctx.changed();}
+  setCell(i,v){
+    this.cur[i]=v;this.hinted[i]=false;this.mark[i]=0;
+    if(v&&this.ctx.autoCheck()&&v!==this.sol[i])this.mark[i]=2;
+    this.afterSet(i,v);
+  }
+  editable(){return !this.done&&!this.locked&&this.sel>=0&&!this.given[this.sel];}
+  keydown(e){
+    if(this.handleKey(e))return true;
+    const k=e.key,N=this.n;
+    if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k))return false;
+    if(this.sel<0)this.sel=0;
+    else{
+      const r=Math.floor(this.sel/N),c=this.sel%N;
+      if(k==='ArrowLeft'&&c>0)this.sel--;
+      if(k==='ArrowRight'&&c<N-1)this.sel++;
+      if(k==='ArrowUp'&&r>0)this.sel-=N;
+      if(k==='ArrowDown'&&r<N-1)this.sel+=N;
+    }
+    this.refresh();return true;
+  }
+  check(){
+    let wrong=0,empty=0,right=0;
+    for(let i=0;i<this.cur.length;i++){
+      if(this.given[i]||this.hinted[i])continue;
+      const s=this.cellState(i);
+      if(s==='empty'){empty++;this.mark[i]=0;}
+      else if(s==='skip')this.mark[i]=0;
+      else if(s==='right'){this.mark[i]=1;right++;}
+      else{this.mark[i]=2;wrong++;}
+    }
+    this.refresh();
+    return {wrong,empty,right};
+  }
+  hint(){
+    const p=this.pickHint();
+    if(!p)return null;
+    this.cur[p.i]=this.sol[p.i];this.hinted[p.i]=true;this.mark[p.i]=0;
+    this.afterSet(p.i,this.sol[p.i]);
+    this.sel=p.i;this.refresh();
+    return p.text;
+  }
+  reset(){
+    for(let i=0;i<this.cur.length;i++)if(!this.given[i]){this.cur[i]=0;this.hinted[i]=false;}
+    this.mark.fill(0);this.sel=-1;this.done=false;
+    this.afterReset();this.refresh();
+  }
+  reveal(){
+    for(let i=0;i<this.cur.length;i++){
+      if(this.given[i])continue;
+      if(this.cur[i]&&this.cur[i]!==this.sol[i])this.mark[i]=2;
+      else if(this.cur[i]===this.sol[i])this.mark[i]=1;
+      else this.revealEmpty(i);
+      this.cur[i]=this.sol[i];
+    }
+    this.afterReset();   // Notizen o. Ä. löschen
+    this.done=true;this.refresh();
+  }
+  finish(){
+    this.done=true;
+    for(let i=0;i<this.cur.length;i++)if(!this.given[i]&&!this.hinted[i])this.mark[i]=1;
+    this.refresh();
+  }
+  applyAutoCheck(on){
+    for(let i=0;i<this.cur.length;i++){
+      if(this.given[i]||this.hinted[i])continue;
+      if(!on&&this.mark[i]===2)this.mark[i]=0;
+      if(on&&this.cur[i]&&this.cur[i]!==this.sol[i])this.mark[i]=2;
+    }
+    this.refresh();
+  }
+  clearSelection(){this.sel=-1;this.refresh();}
+  /* Alle Felder ausgefüllt? (Rätsel mit Wasser/Kreuzen überschreiben das.) */
+  complete(){return this.cur.every(v=>v>0);}
+  /* Vollständig, aber falsch: Fehler rot zeigen und das Rätsel sperren – es gibt kein Korrigieren mehr. */
+  lock(){
+    this.locked=true;this.drag=null;
+    this.check();                                         // markiert die falschen Felder rot
+    for(let i=0;i<this.mark.length;i++)if(this.mark[i]===1)this.mark[i]=0;
+    this.sel=-1;this.refresh();
+  }
+}
+
+
+/* =====================================================================
+   RÄTSEL-MODUL: Logical
+   ===================================================================== */
+/* ===== LOGIK-START ===== */
+/* ---------- Logical ----------
+   Modell: K Kategorien (0 = Namen) mit je N Begriffen. «Item» x = Kategorie*N + Index.
+   Zustand S.r[x*T+y]: 1 = gehört zusammen, -1 = gehört nicht zusammen, 0 = offen.
+   Der Löser arbeitet nur mit Schlüssen, die auch ein Mensch im Hilfsgitter zieht. */
+const LG_NAMES=['Lena','Noah','Mia','Luca','Lara','Nico','Sara','Jan','Elin','Tim','Nora','Levin','Alina','Jonas','Lia','Fabio','Selina','Dario','Ronja','Elias','Malin','Robin'];
+const LG_ART={m:['einen','keinen','dem'],f:['eine','keine','der'],n:['ein','kein','dem']};
+/* Kategorien: vals = Begriffe; subj/pred/neg bauen Satzteile («die Person mit dem Hund» / «hat einen Hund» / «hat keinen Hund») */
+const LG_CATS=[
+  {id:'tier',label:'Haustier',vals:[['Hund','m'],['Katze','f'],['Hamster','m'],['Kaninchen','n'],['Wellensittich','m'],['Schildkröte','f'],['Meerschweinchen','n']],
+   show:v=>v[0],subj:v=>`die Person mit ${LG_ART[v[1]][2]} ${v[0]}`,pred:v=>`hat ${LG_ART[v[1]][0]} ${v[0]}`,neg:v=>`hat ${LG_ART[v[1]][1]} ${v[0]}`},
+  {id:'znueni',label:'Znüni',vals:[['Apfel','m'],['Banane','f'],['Sandwich','n'],['Brezel','f'],['Müesliriegel','m'],['Joghurt','n']],
+   show:v=>v[0],subj:v=>`die Person mit ${LG_ART[v[1]][2]} ${v[0]} als Znüni`,pred:v=>`hat ${LG_ART[v[1]][0]} ${v[0]} als Znüni dabei`,neg:v=>`hat ${LG_ART[v[1]][1]} ${v[0]} als Znüni dabei`},
+  {id:'hobby',label:'Hobby',vals:['Fussball','Schwimmen','Klettern','Zeichnen','Schach','Tanzen','Unihockey','Reiten'],
+   show:v=>v,subj:v=>`die Person mit dem Hobby ${v}`,pred:v=>`hat ${v} als Hobby`,neg:v=>`hat nicht ${v} als Hobby`},
+  {id:'fach',label:'Lieblingsfach',vals:['Mathematik','Deutsch','Englisch','Sport','Musik','Französisch','Geografie'],
+   show:v=>v,subj:v=>`die Person mit dem Lieblingsfach ${v}`,pred:v=>`hat ${v} als Lieblingsfach`,neg:v=>`hat nicht ${v} als Lieblingsfach`},
+  {id:'farbe',label:'Lieblingsfarbe',vals:['Rot','Blau','Grün','Gelb','Violett','Orange'],
+   show:v=>v,subj:v=>`die Person mit der Lieblingsfarbe ${v}`,pred:v=>`hat ${v} als Lieblingsfarbe`,neg:v=>`hat nicht ${v} als Lieblingsfarbe`},
+  {id:'instr',label:'Instrument',vals:['Gitarre','Klavier','Schlagzeug','Geige','Flöte','Trompete'],
+   show:v=>v,rel:true,subj:v=>`die Person, die ${v} spielt`,pred:v=>`spielt ${v}`,neg:v=>`spielt nicht ${v}`},
+  {id:'weg',label:'Schulweg',vals:[['Velo','mit dem Velo'],['Bus','mit dem Bus'],['Tram','mit dem Tram'],['Trottinett','mit dem Trottinett'],['zu Fuss','zu Fuss'],['Zug','mit dem Zug']],
+   show:v=>v[0],rel:true,subj:v=>`die Person, die ${v[1]} zur Schule kommt`,pred:v=>`kommt ${v[1]} zur Schule`,neg:v=>`kommt nicht ${v[1]} zur Schule`},
+  {id:'ort',label:'Wohnort',vals:['Chur','Basel','Luzern','Bern','Zürich','Thun','Aarau'],
+   show:v=>v,subj:v=>`die Person aus ${v}`,pred:v=>`wohnt in ${v}`,neg:v=>`wohnt nicht in ${v}`}
+];
+/* Geordnete Kategorien (für «älter als», «genau ein Rang besser» …). make(N) liefert die N Werte in aufsteigender Reihenfolge. */
+const LG_ORD=[
+  {id:'alter',label:'Alter',make:N=>{const a=11+Math.floor(Math.random()*3);return [...Array(N).keys()].map(k=>a+k);},
+   show:v=>`${v} Jahre`,subj:v=>`die ${v}-jährige Person`,pred:v=>`ist ${v} Jahre alt`,neg:v=>`ist nicht ${v} Jahre alt`,
+   less:'ist jünger als',more:'ist älter als',next:'ist genau ein Jahr jünger als',prev:'ist genau ein Jahr älter als',adj:'ist genau ein Jahr älter oder jünger als'},
+  {id:'rang',label:'Rang am Sporttag',make:N=>[...Array(N).keys()].map(k=>k+1),
+   show:v=>`Rang ${v}`,subj:v=>`die Person auf Rang ${v}`,pred:v=>`belegt am Sporttag Rang ${v}`,neg:v=>`belegt am Sporttag nicht Rang ${v}`,
+   less:'ist am Sporttag besser klassiert als',more:'ist am Sporttag schlechter klassiert als',next:'ist am Sporttag genau einen Rang besser klassiert als',prev:'ist am Sporttag genau einen Rang schlechter klassiert als',adj:'ist am Sporttag genau einen Rang besser oder schlechter klassiert als'},
+  {id:'stock',label:'Stockwerk',make:N=>[...Array(N).keys()].map(k=>k+1),
+   show:v=>`${v}. Stock`,subj:v=>`die Person im ${v}. Stock`,pred:v=>`wohnt im ${v}. Stock`,neg:v=>`wohnt nicht im ${v}. Stock`,
+   less:'wohnt weiter unten als',more:'wohnt weiter oben als',next:'wohnt genau ein Stockwerk tiefer als',prev:'wohnt genau ein Stockwerk höher als',adj:'wohnt genau ein Stockwerk höher oder tiefer als'}
+];
+const LG_NAMECAT={id:'name',label:'Name',show:v=>v,subj:v=>v,pred:v=>`heisst ${v}`,neg:v=>`heisst nicht ${v}`};
+
+/* ----- Zustand und Schlussregeln ----- */
+function lgState(N,K){
+  const T=N*K,r=new Int8Array(T*T);
+  for(let x=0;x<T;x++)for(let y=0;y<T;y++)if(((x/N)|0)===((y/N)|0))r[x*T+y]=x===y?1:-1;
+  return {N,K,T,r,bad:false,ch:false,log:null,why:null,probes:0};
+}
+function lgCopy(S){return {N:S.N,K:S.K,T:S.T,r:S.r.slice(),bad:false,ch:false,log:null,why:null,probes:0};}
+function lgSet(S,x,y,v){
+  const k=S.r[x*S.T+y];
+  if(k===v)return;
+  if(k===-v){S.bad=true;return;}
+  S.r[x*S.T+y]=v;S.r[y*S.T+x]=v;S.ch=true;
+  if(S.log&&v===1)S.log.push({x,y,why:S.why});
+}
+/* Ausschluss: Jeder Begriff gehört zu genau einem Begriff jeder anderen Kategorie */
+function lgBasic(S){
+  const {N,K,T,r}=S;
+  for(let x=0;x<T&&!S.bad;x++){
+    const cx=(x/N)|0;
+    for(let c=0;c<K;c++){
+      if(c===cx)continue;
+      let yes=-1,ny=0,unk=-1,nu=0;
+      for(let j=0;j<N;j++){const y=c*N+j,v=r[x*T+y];if(v===1){yes=y;ny++;}else if(v===0){unk=y;nu++;}}
+      if(ny>1||(ny===0&&nu===0)){S.bad=true;return;}
+      if(ny===1){if(nu){S.why={t:'elim'};for(let j=0;j<N;j++){const y=c*N+j;if(r[x*T+y]===0)lgSet(S,x,y,-1);}}}
+      else if(nu===1){S.why={t:'elim'};lgSet(S,x,unk,1);}
+    }
+  }
+}
+/* Übertragen: Gehört A zu B, dann gilt für A alles, was für B gilt */
+function lgTrans(S){
+  const {T,r}=S;
+  S.why={t:'trans'};
+  for(let x=0;x<T;x++)for(let y=x+1;y<T;y++){
+    if(r[x*T+y]!==1)continue;
+    for(let z=0;z<T;z++){
+      const a=r[x*T+z],b=r[y*T+z];
+      if(a===b)continue;
+      if(a&&b){S.bad=true;return;}
+      if(a)lgSet(S,y,z,a);else lgSet(S,x,z,b);
+    }
+  }
+}
+/* Gitter kombinieren: Haben A und C in einer dritten Kategorie keinen gemeinsamen möglichen Begriff, gehören sie nicht zusammen */
+function lgCross(S){
+  const {N,K,T,r}=S;
+  S.why={t:'cross'};
+  for(let x=0;x<T;x++)for(let z=x+1;z<T;z++){
+    if(r[x*T+z]!==0)continue;
+    const cx=(x/N)|0,cz=(z/N)|0;
+    for(let c=0;c<K;c++){
+      if(c===cx||c===cz)continue;
+      let common=false;
+      for(let j=0;j<N&&!common;j++){const w=c*N+j;if(r[x*T+w]!==-1&&r[z*T+w]!==-1)common=true;}
+      if(!common){lgSet(S,x,z,-1);break;}
+    }
+  }
+}
+function lgOrdOK(t,p,q){return t==='less'?p<q:t==='next'?q===p+1:(q===p+1||q===p-1);}
+function lgApply(S,cl,idx,P,full){
+  const {N,T,r}=S;
+  S.why={t:'clue',k:idx};
+  if(cl.t==='same')lgSet(S,cl.a,cl.b,1);
+  else if(cl.t==='diff')lgSet(S,cl.a,cl.b,-1);
+  else if(cl.t==='tri'){lgSet(S,cl.a,cl.b,-1);lgSet(S,cl.a,cl.c,-1);lgSet(S,cl.b,cl.c,-1);}
+  else if(!full)return;
+  else if(cl.t==='xor'){
+    const s1=r[cl.a*T+cl.b],s2=r[cl.c*T+cl.d];
+    if(s1===1)lgSet(S,cl.c,cl.d,-1);else if(s1===-1)lgSet(S,cl.c,cl.d,1);
+    if(s2===1)lgSet(S,cl.a,cl.b,-1);else if(s2===-1)lgSet(S,cl.a,cl.b,1);
+  }else{
+    const base=P.ord*N,a=cl.a,b=cl.b;
+    if(((a/N)|0)!==((b/N)|0))lgSet(S,a,b,-1);
+    for(let p=0;p<N;p++){
+      if(r[a*T+base+p]!==-1){
+        let ok=false;for(let q=0;q<N&&!ok;q++)if(r[b*T+base+q]!==-1&&lgOrdOK(cl.t,p,q))ok=true;
+        if(!ok)lgSet(S,a,base+p,-1);
+      }
+      if(r[b*T+base+p]!==-1){
+        let ok=false;for(let q=0;q<N&&!ok;q++)if(r[a*T+base+q]!==-1&&lgOrdOK(cl.t,q,p))ok=true;
+        if(!ok)lgSet(S,b,base+p,-1);
+      }
+    }
+  }
+}
+function lgSolved(S){
+  const {N,K,T,r}=S;
+  for(let x=N;x<T;x++){let ok=false;for(let p=0;p<N;p++)if(r[x*T+p]===1)ok=true;if(!ok)return false;}
+  return true;
+}
+/* Technik-Stufen: 1 direkte Hinweise + Ausschluss · 2 + Übertragen · 3 + Reihenfolge-/Entweder-oder-Hinweise
+   4 + Gitter kombinieren · 5 + Annahme testen (führt eine Annahme zum Widerspruch, gilt das Gegenteil) */
+const LG_TIERS=[null,{cheap:1},{cheap:2},{cheap:3},{cheap:4},{cheap:4,probe:{cheap:4}}];
+function lgProp(S,P,L){
+  const cl=P.clues;
+  for(;;){
+    do{
+      S.ch=false;
+      for(let k=0;k<cl.length;k++)lgApply(S,cl[k],k,P,L.cheap>=3);
+      if(S.bad)return false;
+      lgBasic(S);if(S.bad)return false;
+      if(L.cheap>=2){lgTrans(S);if(S.bad)return false;}
+      if(!S.ch&&L.cheap>=4){lgCross(S);if(S.bad)return false;}
+    }while(S.ch);
+    if(!L.probe||lgSolved(S))return true;
+    let found=false;
+    const {N,T}=S;
+    for(let x=0;x<T&&!found;x++)for(let z=x+1;z<T&&!found;z++){
+      if(S.r[x*T+z]!==0)continue;
+      for(const v of [1,-1]){
+        const C=lgCopy(S);lgSet(C,x,z,v);
+        if(!lgProp(C,P,L.probe)){S.why={t:'probe'};lgSet(S,x,z,-v);S.probes++;found=true;break;}
+      }
+    }
+    if(!found)return true;
+  }
+}
+/* Stufe, die zum Lösen nötig ist (0 = mit diesen Techniken nicht lösbar) */
+function lgTier(P,maxT,st){
+  for(let t=1;t<=(maxT||5);t++){
+    const S=lgState(P.N,P.K);
+    if(lgProp(S,P,LG_TIERS[t])&&lgSolved(S)){if(st)st.probes=S.probes;return t;}
+  }
+  return 0;
+}
+function lgSolvable(P,t){const S=lgState(P.N,P.K);return lgProp(S,P,LG_TIERS[t])&&lgSolved(S);}
+
+/* ----- Hinweise erzeugen ----- */
+function lgCap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function lgWeighted(w){let s=0;for(const k in w)s+=w[k];let x=Math.random()*s;for(const k in w){x-=w[k];if(x<0)return k;}return Object.keys(w)[0];}
+/* lvl: {tier, probes, types:{same,diff,less,next,adj,xor,tri}, nameOnly, ord} */
+function lgGenerate(N,M,lvl){
+  const K=M+1;
+  /* Kategorien wählen */
+  const defs=[LG_NAMECAT],vals=[shuffle(LG_NAMES.slice()).slice(0,N)];
+  let ord=-1;
+  const pool=shuffle(LG_CATS.slice());
+  const nPlain=lvl.ord?M-1:M;
+  for(let k=0;k<nPlain;k++){defs.push(pool[k]);vals.push(shuffle(pool[k].vals.slice()).slice(0,N));}
+  if(lvl.ord){
+    const o=randOf(LG_ORD);
+    const pos=1+Math.floor(Math.random()*M);           // Zeile der geordneten Kategorie
+    defs.splice(pos,0,o);vals.splice(pos,0,o.make(N));ord=pos;
+  }
+  /* Lösung: perm[c][Person] = Index des Begriffs */
+  const perm=[[...Array(N).keys()]];
+  for(let c=1;c<K;c++)perm.push(shuffle([...Array(N).keys()]));
+  const item=(c,p)=>c*N+perm[c][p];
+  const plainCats=[...Array(K).keys()].filter(c=>c!==ord);
+  const P={N,K,ord,clues:[]};
+  const two=(arr)=>{const a=randOf(arr);let b;do{b=randOf(arr);}while(b===a);return [a,b];};
+  const persons=[...Array(N).keys()];
+  function make(){
+    const t=lgWeighted(lvl.types);
+    if(t==='same'){
+      let [c1,c2]=two([...Array(K).keys()]);
+      if(lvl.nameOnly){c1=0;c2=1+Math.floor(Math.random()*M);}
+      const p=randOf(persons);return {t,a:item(c1,p),b:item(c2,p)};
+    }
+    if(t==='diff'){
+      let [c1,c2]=two([...Array(K).keys()]);
+      if(lvl.nameOnly){c1=0;c2=1+Math.floor(Math.random()*M);}
+      const [p,q]=two(persons);return {t,a:item(c1,p),b:item(c2,q)};
+    }
+    if(t==='tri'){
+      const ps=shuffle(persons.slice()).slice(0,3);
+      const cs=[randOf(plainCats),randOf(plainCats),randOf(plainCats)];
+      if(cs[0]===cs[1]&&cs[1]===cs[2])return null;
+      return {t,a:item(cs[0],ps[0]),b:item(cs[1],ps[1]),c:item(cs[2],ps[2])};
+    }
+    if(t==='xor'){
+      const [c1,c2]=two([...Array(K).keys()]),[c3,c4]=two([...Array(K).keys()]);
+      const p=randOf(persons),[q,q2]=two(persons);
+      const T1={a:item(c1,p),b:item(c2,p)},F={a:item(c3,q),b:item(c4,q2)};
+      if(T1.a===F.a&&T1.b===F.b)return null;
+      return Math.random()<.5?{t,a:T1.a,b:T1.b,c:F.a,d:F.b}:{t,a:F.a,b:F.b,c:T1.a,d:T1.b};
+    }
+    /* Reihenfolge: less / next / adj */
+    let [p,q]=two(persons);
+    const op=perm[ord][p],oq=perm[ord][q];
+    if(t==='less'){if(op>oq)[p,q]=[q,p];}
+    else if(Math.abs(op-oq)!==1)return null;
+    else if(t==='next'&&op>oq)[p,q]=[q,p];
+    return {t,a:item(randOf(plainCats),p),b:item(randOf(plainCats),q)};
+  }
+  const key=c=>c.t+':'+[c.a,c.b,c.c,c.d].join(',');
+  const seen=new Set();
+  /* 1. Hinweise sammeln, bis das Rätsel mit den erlaubten Techniken lösbar ist */
+  let guard=0;
+  while(!lgSolvable(P,lvl.tier)){
+    if(++guard>400||P.clues.length>N*K*2)return null;
+    const c=make();if(!c||seen.has(key(c)))continue;
+    seen.add(key(c));P.clues.push(c);
+  }
+  /* 2. Überflüssige Hinweise entfernen (einfache zuerst) – das Rätsel bleibt logisch lösbar */
+  const order=shuffle(P.clues.slice()).sort((x,y)=>(x.t==='same'?0:1)-(y.t==='same'?0:1));
+  for(const c of order){
+    const i=P.clues.indexOf(c);
+    P.clues.splice(i,1);
+    if(!lgSolvable(P,lvl.tier))P.clues.splice(i,0,c);
+  }
+  /* 3. Genau die gewünschte Stufe muss nötig sein */
+  const st={probes:0};
+  if(lgTier(P,lvl.tier,st)!==lvl.tier||st.probes<(lvl.probes||0))return null;
+  if(lvl.maxProbes&&st.probes>lvl.maxProbes)return null;
+  shuffle(P.clues);
+  /* Texte */
+  const S=x=>{const c=(x/N)|0;return defs[c].subj(vals[c][x%N]);};
+  const Sc=x=>S(x)+(defs[(x/N)|0].rel?',':'');          // mitten im Satz: Komma nach Relativsatz
+  const Pr=x=>{const c=(x/N)|0;return defs[c].pred(vals[c][x%N]);};
+  const Ng=x=>{const c=(x/N)|0;return defs[c].neg(vals[c][x%N]);};
+  const stmt=(a,b)=>{                                   // Name möglichst als Subjekt
+    if(b<N||(a>=N&&Math.random()<.5))[a,b]=[b,a];
+    return `${lgCap(Sc(a))} ${Pr(b)}.`;
+  };
+  const o=ord>=0?defs[ord]:null;
+  const texts=P.clues.map(c=>{
+    if(c.t==='same')return stmt(c.a,c.b);
+    if(c.t==='diff'){let a=c.a,b=c.b;if(b<N||(a>=N&&Math.random()<.5))[a,b]=[b,a];return `${lgCap(Sc(a))} ${Ng(b)}.`;}
+    if(c.t==='tri')return `${lgCap(S(c.a))}, ${Sc(c.b)} und ${Sc(c.c)} sind drei verschiedene Personen.`;
+    if(c.t==='xor')return `Genau eine der beiden Aussagen stimmt:\n«${stmt(c.a,c.b)}»\n«${stmt(c.c,c.d)}»`;
+    if(c.t==='less')return Math.random()<.5?`${lgCap(Sc(c.a))} ${o.less} ${S(c.b)}.`:`${lgCap(Sc(c.b))} ${o.more} ${S(c.a)}.`;
+    if(c.t==='next')return Math.random()<.5?`${lgCap(Sc(c.a))} ${o.next} ${S(c.b)}.`:`${lgCap(Sc(c.b))} ${o.prev} ${S(c.a)}.`;
+    return `${lgCap(Sc(c.a))} ${o.adj} ${S(c.b)}.`;
+  });
+  const sol=[];
+  for(let c=1;c<K;c++)for(let p=0;p<N;p++)sol.push(perm[c][p]+1);
+  return {N,K,ord,clues:P.clues,texts,sol,
+    cats:defs.map((d,c)=>({label:d.label,vals:vals[c].map(v=>d.show(v))}))};
+}
+/* ===== LOGIK-ENDE ===== */
+
+/* ---------- Logical ---------- */
+class LogicalPuzzle extends GridPuzzle{
+  constructor(def,size,lvlKey,d){
+    super(def,size,lvlKey,{sol:d.sol,puz:new Array(d.sol.length).fill(0)});
+    const L=d.sol.length;
+    this.hinted=new Array(L).fill(false);this.mark=new Array(L).fill(0);
+    this.d=d;this.N=d.N;this.M=d.K-1;
+    this.clueEls=[];this.gridEls=[];this.padEl=null;
+  }
+  baseClass(i){return 'lgc';}
+  extraClass(i){
+    if(i===this.sel)return ' sel';
+    if(this.sel>=0&&Math.floor(i/this.N)===Math.floor(this.sel/this.N))return ' peer';
+    return '';
+  }
+  paint(i,td){const v=this.cur[i];td.textContent=v?this.d.cats[Math.floor(i/this.N)+1].vals[v-1]:'';}
+  el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+
+  buildBoard(){
+    const d=this.d,N=this.N,M=this.M,el=this.el;
+    const w=el('div','lg g-logical');
+    w.style.setProperty('--gc',N>=5?'25px':'30px');
+    /* Ausgangslage + Hinweise */
+    const box=el('div','lg-box');
+    box.appendChild(el('h3','', 'Ausgangslage'));
+    box.appendChild(el('p','lg-intro',`${N} Jugendliche: ${d.cats[0].vals.join(', ')}. Zu jeder Person gehört aus jeder Zeile der Tabelle genau ein Begriff – und jeder Begriff kommt genau einmal vor.`));
+    box.appendChild(el('h3','', `Hinweise (${d.texts.length})`));
+    const ol=el('ol','lg-clues');
+    this.clueEls=d.texts.map(t=>{
+      const li=el('li','',t);
+      li.title='Antippen: Hinweis als erledigt abhaken';
+      li.addEventListener('click',()=>{if(!this.done&&!this.locked)li.classList.toggle('struck');});
+      ol.appendChild(li);return li;
+    });
+    box.appendChild(ol);
+    box.appendChild(el('p','lg-note','Antippen = Hinweis abhaken (nur als Merkhilfe).'));
+    w.appendChild(box);
+    /* Lösungstabelle */
+    w.appendChild(el('h3','lg-h','Lösungstabelle'));
+    const sc=el('div','lg-scroll'),tb=el('table','lg-table');
+    tb.setAttribute('aria-label','Lösungstabelle');
+    let tr=el('tr');tr.appendChild(el('th','lg-corner',''));
+    for(const n of d.cats[0].vals)tr.appendChild(el('th','lg-name',n));
+    tb.appendChild(tr);
+    this.cells=[];
+    for(let r=0;r<M;r++){
+      tr=el('tr');tr.appendChild(el('th','lg-cat',d.cats[r+1].label));
+      for(let c=0;c<N;c++){
+        const td=el('td','lgc'),i=r*N+c;
+        td.tabIndex=0;
+        td.addEventListener('click',()=>this.onCell(i));
+        tr.appendChild(td);this.cells.push(td);
+      }
+      tb.appendChild(tr);
+    }
+    sc.appendChild(tb);w.appendChild(sc);
+    this.padEl=el('div','lgpad');w.appendChild(this.padEl);
+    /* Hilfsgitter (Kreuztabelle) – nur Notizen, wird nicht bewertet */
+    w.appendChild(el('h3','lg-h','Hilfsgitter für deine Notizen'));
+    w.appendChild(el('p','lg-note','Feld antippen: ✗ = gehört nicht zusammen · ✓ = gehört zusammen · leer. Das Hilfsgitter wird nicht bewertet – es zählt nur die Lösungstabelle.'));
+    const sc2=el('div','lg-scroll'),g=el('table','lg-grid');
+    g.setAttribute('aria-label','Hilfsgitter');
+    const cols=[];for(let c=1;c<=M;c++)cols.push(c);
+    const rows=[0];for(let c=M;c>=2;c--)rows.push(c);
+    tr=el('tr');const co=el('th','lg-corner','');co.colSpan=2;co.rowSpan=2;tr.appendChild(co);
+    for(const c of cols){const th=el('th','lg-gcat bl',d.cats[c].label);th.colSpan=N;tr.appendChild(th);}
+    g.appendChild(tr);
+    tr=el('tr');
+    for(const c of cols)d.cats[c].vals.forEach((v,j)=>{const th=el('th','lg-gv'+(j===0?' bl':''));th.appendChild(el('span','',v));tr.appendChild(th);});
+    g.appendChild(tr);
+    this.gridEls=[];
+    rows.forEach((rc,bi)=>{
+      for(let i=0;i<N;i++){
+        tr=el('tr');
+        if(i===0){const th=el('th','lg-gcatv bt');th.rowSpan=N;th.appendChild(el('span','',d.cats[rc].label));tr.appendChild(th);}
+        tr.appendChild(el('th','lg-gr'+(i===0?' bt':''),d.cats[rc].vals[i]));
+        for(let cj=0;cj<M-bi;cj++)for(let j=0;j<N;j++){
+          const td=el('td','lg-g'+(j===0?' bl':'')+(i===0?' bt':''));
+          td.dataset.s='0';
+          td.addEventListener('click',()=>{
+            if(this.done||this.locked)return;
+            const s=(+td.dataset.s+1)%3;td.dataset.s=s;td.textContent=s===1?'✗':s===2?'✓':'';
+            td.className=td.className.replace(/ (no|yes)\b/g,'')+(s===1?' no':s===2?' yes':'');
+          });
+          tr.appendChild(td);this.gridEls.push(td);
+        }
+        g.appendChild(tr);
+      }
+    });
+    sc2.appendChild(g);w.appendChild(sc2);
+    return w;
+  }
+  buildPad(pad){pad.className='lg-padslot';}          // Eingabe sitzt direkt unter der Lösungstabelle
+  afterRefresh(){this.renderPad();}
+  renderPad(){
+    const p=this.padEl;if(!p)return;
+    p.innerHTML='';
+    if(this.done||this.locked)return;
+    if(this.sel<0){p.appendChild(this.el('p','lg-padhelp','Feld in der Lösungstabelle antippen, dann den passenden Begriff wählen.'));return;}
+    const r=Math.floor(this.sel/this.N),cat=this.d.cats[r+1];
+    p.appendChild(this.el('p','lg-padhelp',`${cat.label} von ${this.d.cats[0].vals[this.sel%this.N]}:`));
+    const used=new Set();
+    for(let c=0;c<this.N;c++)if(r*this.N+c!==this.sel&&this.cur[r*this.N+c])used.add(this.cur[r*this.N+c]);
+    const row=this.el('div','lg-padrow');
+    cat.vals.forEach((v,k)=>{
+      const b=this.el('button',(used.has(k+1)?'used':'')+(this.cur[this.sel]===k+1?' on':''),v);
+      b.addEventListener('click',()=>this.pick(k+1));
+      row.appendChild(b);
+    });
+    const del=this.el('button','del','✕ leeren');
+    del.addEventListener('click',()=>this.pick(0));
+    row.appendChild(del);
+    p.appendChild(row);
+  }
+  pick(v){if(!this.editable())return;this.setCell(this.sel,v);this.commit();}
+  keydown(e){
+    const k=e.key,N=this.N,M=this.M;
+    if(/^[1-9]$/.test(k)&&+k<=N){this.pick(+k);return true;}
+    if(k==='Backspace'||k==='Delete'){this.pick(0);return true;}
+    if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k))return false;
+    if(this.sel<0)this.sel=0;
+    else{
+      const r=Math.floor(this.sel/N),c=this.sel%N;
+      if(k==='ArrowLeft'&&c>0)this.sel--;
+      if(k==='ArrowRight'&&c<N-1)this.sel++;
+      if(k==='ArrowUp'&&r>0)this.sel-=N;
+      if(k==='ArrowDown'&&r<M-1)this.sel+=N;
+    }
+    this.refresh();return true;
+  }
+  afterReset(){
+    for(const li of this.clueEls)li.classList.remove('struck');
+    for(const td of this.gridEls){td.dataset.s='0';td.textContent='';td.className=td.className.replace(/ (no|yes)\b/g,'');}
+  }
+  /* Tipp: mit dem bisher richtig Eingetragenen weiterschliessen und das erste neue Feld verraten */
+  pickHint(){
+    const d=this.d,N=this.N,S=lgState(N,d.K);
+    for(let i=0;i<this.cur.length;i++)if(this.cur[i]&&this.cur[i]===this.sol[i])lgSet(S,i%N,(Math.floor(i/N)+1)*N+this.cur[i]-1,1);
+    S.log=[];
+    lgProp(S,d,LG_TIERS[5]);
+    for(const e of S.log){
+      const p=Math.min(e.x,e.y),a=Math.max(e.x,e.y);
+      if(p>=N)continue;
+      const i=(Math.floor(a/N)-1)*N+p;
+      if(this.cur[i]===this.sol[i])continue;
+      const w=e.why||{};
+      const text=w.t==='clue'?`Dieses Feld ergibt sich aus Hinweis ${w.k+1} – zusammen mit dem, was du schon weisst.`
+        :w.t==='elim'?'Für dieses Feld bleibt nur noch eine Möglichkeit übrig – alle anderen sind ausgeschlossen.'
+        :w.t==='trans'?'Kombiniere, was du schon weisst: Gehört A zu B und B zu C, dann gehört auch A zu C.'
+        :'Dieses Feld findest du mit einer Annahme: Probiere eine Möglichkeit aus – führt sie zu einem Widerspruch, ist sie ausgeschlossen.';
+      return {i,text:'Tipp (gelb): '+text};
+    }
+    const open=[];
+    for(let i=0;i<this.cur.length;i++)if(this.cur[i]!==this.sol[i])open.push(i);
+    if(!open.length)return null;
+    return {i:randOf(open),text:'Tipp (gelb): Ein Feld der Lösungstabelle wurde ausgefüllt.'};
+  }
+}
+
+/* ----- Anmeldung beim Kern ----- */
+const LG_HARD={same:1,diff:2,less:2,next:1,adj:1,tri:1,xor:.6};
+const GAME={
+    title:'Logical-Trainer',
+    id:'logical', name:'Logical', icon:'🧠', units:['Angabe','Angaben'],
+    intro:'Wer hat was? Kombiniere die Hinweise und finde die einzige Lösung – ganz ohne Raten.',
+    /* Grösse = Personen*10 + Merkmale */
+    sizes:[32,33,43,44,54], size:32, lvl:'sl', tools:{notes:false},
+    sizeTitle:'Grösse (Personen × Merkmale)',
+    sizeLabel:v=>`${Math.floor(v/10)} × ${v%10}`,
+    tag:(s,l)=>`${LEVEL_NAMES[l]} (${Math.floor(s/10)} Personen, ${s%10} Merkmale)`,
+    missing:n=>`Noch ${n} Felder leer.`,
+    levels:{
+      sl:{tier:1,sizes:[32,33,43],types:{same:3,diff:1},nameOnly:true,desc:'Jeder Hinweis nennt eine Person beim Namen. Eintragen, was feststeht – der Rest ergibt sich durch Ausschliessen.'},
+      l: {tier:2,sizes:[33,43,44],types:{same:2,diff:2},desc:'Nicht mehr jeder Hinweis nennt einen Namen. Du musst Hinweise verketten: Gehört A zu B und B zu C, dann gehört auch A zu C.'},
+      m: {tier:3,ord:true,sizes:[43,44,54],types:{same:2,diff:2,less:2,next:1},desc:'Neu mit Reihenfolge-Hinweisen («älter als», «genau einen Rang besser»). Überlege, welche Plätze dadurch wegfallen. Das Hilfsgitter lohnt sich.'},
+      s: {tier:4,ord:true,sizes:[43,44,54],types:LG_HARD,desc:'Kaum direkte Angaben, dafür «genau eine der beiden Aussagen stimmt» und «drei verschiedene Personen». Du musst mehrere Teile des Hilfsgitters miteinander kombinieren.'},
+      ss:{tier:5,probes:1,maxProbes:2,ord:true,sizes:[44,54],types:LG_HARD,desc:'Mit Ausschliessen allein kommst du nicht ans Ziel: Mache eine Annahme («Angenommen, Lena hat den Hund …») und suche den Widerspruch. Ohne Hilfsgitter kaum zu schaffen.'},
+      us:{tier:5,probes:3,ord:true,sizes:[54],types:LG_HARD,desc:'Das Härteste: 5 Personen, 4 Merkmale – und du brauchst mehrmals eine Annahme, die du bis zum Widerspruch durchdenkst. Viel Ausdauer nötig, aber alles ist logisch herleitbar.'}
+    },
+    create(size,lvl){
+      const N=Math.floor(size/10),M=size%10,t0=Date.now();
+      for(let t=0;t<3000&&(t<20||Date.now()-t0<12000);t++){const d=lgGenerate(N,M,this.levels[lvl]);if(d)return new LogicalPuzzle(this,size,lvl,d);}
+      return null;
+    },
+    rules(n){
+      return `
+        <li>Zu jeder Person gehört aus jeder Zeile genau <b>ein Begriff</b>. Jeder Begriff kommt <b>genau einmal</b> vor.</li>
+        <li>Lies alle <b>Hinweise</b> genau. Jeder Hinweis stimmt – und zusammen ergeben sie genau <b>eine Lösung</b>.</li>
+        <li>Trage im <b>Hilfsgitter</b> ein, was du weisst: <b>✗</b> = gehört nicht zusammen, <b>✓</b> = gehört zusammen.</li>
+        <li><b>Ausschliessen:</b> Steht in einem Block ein ✓, bekommen alle anderen Felder derselben Zeile und Spalte ein ✗. Sind in einer Zeile alle Felder bis auf eines ✗, gehört dort das ✓ hin.</li>
+        <li><b>Verketten:</b> Gehört A zu B und B zu C, dann gehört auch A zu C. Gehört A zu B, aber B nicht zu C, dann gehört auch A nicht zu C.</li>
+        <li><b>Reihenfolge:</b> «A ist älter als B» heisst auch: A und B sind verschiedene Personen, A ist nicht die jüngste und B nicht die älteste Person.</li>
+        <li><b>Für Fortgeschrittene:</b> Kommst du nicht weiter, mache eine Annahme und denke sie durch. Führt sie zu einem Widerspruch, gilt das Gegenteil.</li>
+        <li><b>Abgeben:</b> Fülle die ganze Lösungstabelle aus und drücke dann «Abgeben». Erst jetzt wird korrigiert: Stimmt etwas nicht, werden die falschen Felder rot und du musst ein neues Rätsel beginnen. Prüfe deshalb vor dem Abgeben alle Hinweise nochmals der Reihe nach.</li>
+        <li><b>Bedienung:</b> Feld in der Lösungstabelle antippen und Begriff wählen. Tastatur: Pfeiltasten, Ziffern 1–${Math.floor(n/10)}, Entf.</li>`;
+    }
+  };
+
+/* =====================================================================
+   KERN – Oberfläche (gilt für jedes Rätsel)
+   Erwartet eine globale Konstante GAME (vom Rätsel-Modul definiert).
+   Kümmert sich um: Auswahl Grösse/Niveau, Zeit, Statistik, Prüfen, Tipp,
+   Neu beginnen, Lösung zeigen, Drucken, Gewonnen-Dialog, Tastatur,
+   Einbettung in die Plattform (?embed=1).
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const def=GAME;
+const EMBED=/[?&]embed=1/.test(location.search)||window.name==='raetsel-embed';
+const STORE_KEY='raetsel-trainer-v1-'+def.id;
+const settings={size:def.size,lvl:def.lvl};
+let solUsed=false,puz=null,noteMode=false,tips=0,checks=0,startT=0,timerId=null,genToken=0;
+
+$('autoCheck').checked=false;
+function loadStore(){
+  try{
+    const o=JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+    if(def.sizes.includes(o.size))settings.size=o.size;
+    if(def.levels[o.lvl])settings.lvl=o.lvl;
+  }catch(e){}
+}
+function saveStore(){try{localStorage.setItem(STORE_KEY,JSON.stringify(settings));}catch(e){}}
+
+/* Meldungen, Zeit, Statistik */
+function showMsg(t,type){const m=$('msg');m.textContent=t;m.className='msg show '+type;}
+function hideMsg(){$('msg').className='msg';}
+function elapsed(){return Math.floor((Date.now()-startT)/1000);}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function startTimer(){stopTimer();startT=Date.now();$('stTime').textContent='00:00';timerId=setInterval(()=>$('stTime').textContent=fmt(elapsed()),1000);}
+function stopTimer(){if(timerId)clearInterval(timerId);timerId=null;}
+/* Deutlich sichtbare Kennzeichnung: Wurde die Lösung angezeigt, bleibt das für dieses Rätsel sichtbar
+   (auch nach «Neu beginnen» und nach dem Lösen) – ein Screenshot kann also nicht als eigene Lösung gelten. */
+function updateStatus(){
+  const st=$('stStatus'),won=puz&&puz.done&&!solUsed&&puz.solved(),lk=puz&&puz.locked&&!solUsed,rdy=puz&&!puz.done&&!puz.locked&&puz.complete();
+  st.className=(solUsed||lk)?'bad':won?'good':'';
+  st.textContent=solUsed?'⚠ Lösung angezeigt':lk?'✖ nicht richtig gelöst':won?'✔ selbst gelöst':rdy?'bereit zum Abgeben':'in Arbeit';
+  $('solBanner').style.display=solUsed?'block':'none';
+  $('stage').classList.toggle('sol',solUsed);
+}
+/* Tipps je Niveau: einfache Stufen keine, Mittel 1, Schwer 2, Sehr schwer/Ultraschwer 3 */
+const TIP_LIMIT={sl:0,l:0,m:1,s:2,ss:3,us:3};
+function tipLimit(){return TIP_LIMIT[puz?puz.lvlKey:settings.lvl]||0;}
+function tipText(l){const n=TIP_LIMIT[l]||0;return n===0?'Keine Tipps möglich.':n===1?'Maximal 1 Tipp.':`Maximal ${n} Tipps.`;}
+function updateStats(){$('stTips').textContent=tips+'/'+tipLimit();$('stChecks').textContent=checks;}
+
+const ctx={
+  autoCheck:()=>$('autoCheck').checked,
+  noteMode:()=>noteMode,
+  hideMsg,
+  changed:()=>{refreshTools();},
+
+  msg:showMsg
+};
+/* Beschriftungen – Rätsel dürfen sie überschreiben (def.sizeLabel, def.tag, def.newLabel …) */
+const sizeLabel=v=>def.sizeLabel?def.sizeLabel(v):`${v} × ${v}`;
+const tagOf=(s,l)=>def.tag?def.tag(s,l):`${LEVEL_NAMES[l]} (${s}×${s})`;
+
+/* Auswahl-Leisten */
+function makeSeg(el,items,current,onPick){
+  el.innerHTML='';
+  for(const it of items){
+    const b=document.createElement('button');
+    b.textContent=it.label;b.dataset.v=it.v;
+    b.classList.toggle('on',String(it.v)===String(current));
+    b.addEventListener('click',()=>onPick(it.v));
+    el.appendChild(b);
+  }
+}
+/* Manche Niveaus gibt es nur ab einer bestimmten Grösse (levels.xx.sizes) */
+function sizesFor(){return def.levels[settings.lvl].sizes||def.sizes;}
+function buildOptions(){
+  const allowed=sizesFor();
+  if(!allowed.includes(settings.size))settings.size=allowed.find(n=>n>=settings.size)||allowed[allowed.length-1];
+  makeSeg($('sizeSeg'),allowed.map(n=>({v:n,label:sizeLabel(n)})),settings.size,v=>{settings.size=v;buildOptions();saveStore();updateSetupSel();});
+  makeSeg($('lvlSeg'),Object.keys(def.levels).map(k=>({v:k,label:LEVEL_NAMES[k]})),settings.lvl,v=>{settings.lvl=v;buildOptions();saveStore();updateSetupSel();});
+  const d=def.levels[settings.lvl].desc;
+  $('lvlDesc').textContent=(typeof d==='function'?d(settings.size):d)+' '+tipText(settings.lvl);
+  $('sizeSeg').style.display=def.sizes.length>1?'':'none';
+  $('sizeLbl').style.display=def.sizes.length>1?'':'none';
+}
+
+
+/* Schritt 1: Rahmenbedingungen wählen – Schritt 2: Rätsel erstellen */
+const TOOL_IDS=['btnCheck','btnNotes','btnHint','btnReset','btnSolve','btnPrint','btnSubmit'];
+function toolsDisabled(on){for(const id of TOOL_IDS){const e=$(id);if(e)e.disabled=on;}if($('autoCheck'))$('autoCheck').disabled=on;}
+function showSetup(){
+  ++genToken;stopTimer();puz=null;tips=0;checks=0;solUsed=false;
+  const stage=$('stage');stage.classList.remove('loading','sol');
+  stage.innerHTML='';document.body.classList.add('setup-mode');
+  const pad=$('pad');pad.innerHTML='';pad.removeAttribute('style');
+  toolsDisabled(true);hideMsg();
+  $('stLevel').textContent='–';$('stTime').textContent='00:00';$('stStatus').textContent='noch kein Rätsel';$('stStatus').className='';
+  if($('stTips'))$('stTips').textContent='–';
+  if($('solBanner'))$('solBanner').style.display='none';
+  updateSetupSel();
+}
+function updateSetupSel(){const e=$('setupSel');if(e)e.textContent=(def.sizes.length>1?sizeLabel(settings.size)+' · ':'')+LEVEL_NAMES[settings.lvl];}
+function startGame(){
+  if(puz&&!puz.done&&!puz.locked&&!solUsed&&!confirm('Das laufende Rätsel wird verworfen. Wirklich ein neues Rätsel erstellen?'))return;
+  newGame();
+}
+
+/* Neues Rätsel */
+function newGame(){
+  const token=++genToken, stage=$('stage');
+  document.body.classList.remove('setup-mode');
+  stopTimer();
+  stage.classList.add('loading');
+  showMsg(`${def.name} wird erstellt …`,'info');
+  setTimeout(()=>{
+    if(token!==genToken)return;
+    let p=null;
+    try{p=def.create(settings.size,settings.lvl);}catch(err){console.error(err);}
+    stage.classList.remove('loading');
+    if(!p){showMsg('Das Rätsel konnte nicht erstellt werden. Bitte nochmals versuchen.','warn');return;}
+    puz=p;tips=0;checks=0;solUsed=false;
+    toolsDisabled(false);
+    puz.mount(ctx,stage,$('pad'));setLocked(false);
+    if($('autoCheck').checked)puz.applyAutoCheck(true);
+    $('stLevel').textContent=tagOf(settings.size,settings.lvl);
+    $('phTitle').textContent=`${def.name} · ${tagOf(settings.size,settings.lvl)}`;
+    $('rules').innerHTML=def.rules(settings.size);
+    updateStats();updateStatus();startTimer();hideMsg();
+  },30);
+}
+
+/* Werkzeuge */
+function check(){
+  if(!puz||puz.done||puz.locked)return;
+  if(puz.customCheck){checks++;updateStats();const r=puz.customCheck();showMsg(r.text,r.type);return;}
+  checks++;
+  const {wrong,empty,right}=puz.check();
+  updateStats();
+  if(puz.solved()){win();return;}
+  const [one,many]=def.units;
+  if(wrong===0){
+    showMsg(right===0?`Noch nichts eingetragen. ${def.missing(empty)}`
+      :`Super! ${right===1?'Die eingetragene '+one+' ist':'Alle '+right+' eingetragenen '+many+' sind'} richtig. ${def.missing(empty)}`,'good');
+  } else {
+    showMsg(`${wrong} ${wrong===1?one+' ist':many+' sind'} falsch (rot). ${right} richtig. ${def.missing(empty)} Korrigiere die roten Felder.`,'warn');
+  }
+}
+function hint(){
+  if(!puz||puz.done||puz.locked||tips>=tipLimit())return;
+  const t=puz.hint();
+  if(t===null)return;
+  tips++;updateStats();showMsg(t,'info');
+  ctx.changed();
+}
+function resetGame(){
+  if(!puz||puz.locked||!confirm('Alle eigenen Eingaben löschen und neu beginnen? Bereits benutzte Tipps bleiben verbraucht.'))return;
+  puz.reset();startTimer();hideMsg();updateStats();refreshTools();
+}
+function showSolution(){
+  if(!puz)return;
+  if(!confirm(`Wirklich die ganze Lösung anzeigen? Das ${def.name}-Rätsel gilt dann als nicht gelöst.`))return;
+  solUsed=true;puz.reveal();stopTimer();refreshTools();
+  showMsg('Lösung angezeigt: grün = du hattest es richtig, rot = war falsch, gelb = war leer.','info');
+}
+/* Werkzeuge sperren/freigeben (nach einem vollständig falsch gelösten Rätsel bleibt nur «Lösung zeigen» / «Neues Rätsel») */
+function setLocked(on){
+  for(const id of ['btnCheck','btnHint','btnReset','btnNotes','autoCheck'])$(id).disabled=on;
+  $('autoCheck').parentElement.classList.toggle('off',on);
+  document.querySelectorAll('#pad button').forEach(b=>b.disabled=on);
+  refreshTools();
+}
+/* «Abgeben» ist erst möglich, wenn alles ausgefüllt ist. Dann sind Überprüfen und Tipp gesperrt – sonst könnte man vor dem Abgeben noch Fehler suchen. */
+function refreshTools(){
+  if(!puz)return;
+  const over=puz.done||puz.locked,comp=!over&&puz.complete();
+  $('btnSubmit').disabled=!comp;
+  $('btnSubmit').title=comp?'':'Erst alle Felder ausfüllen';
+  const lim=tipLimit(),left=lim-tips;
+  $('btnHint').textContent=lim?`💡 Tipp (${left} übrig)`:'💡 Keine Tipps';
+  if(!puz.locked){$('btnCheck').disabled=true;$('btnHint').disabled=over||comp||left<=0;}
+  updateStatus();
+  if(comp&&!$('msg').classList.contains('show'))showMsg('Alles ausgefüllt. Prüfe nochmals in Ruhe – mit «Abgeben» gibst du das Rätsel ab. Erst dann wird korrigiert.','info');
+}
+/* Abgeben: erst jetzt wird ausgewertet */
+function submitPuz(){
+  if(!puz||puz.done||puz.locked||!puz.complete())return;
+  if(puz.solved())win();else fail();
+}
+/* Rätsel ist vollständig ausgefüllt, aber nicht richtig: Fehler rot, keine Korrektur mehr möglich */
+function fail(){
+  puz.lock();stopTimer();setLocked(true);
+  const bad=puz.mark.filter(m=>m===2).length;
+  $('winTitle').textContent='✖ Leider nicht richtig';
+  $('winText').innerHTML=`${def.name} · Niveau: <b>${tagOf(settings.size,settings.lvl)}</b><br>Zeit: <b>${fmt(elapsed())}</b> · Tipps: <b>${tips} von ${tipLimit()}</b><br>Du hast das Rätsel abgegeben, aber <b>${bad===1?'ein Feld ist':bad+' Felder sind'} falsch</b> (rot markiert).<br>Abgegebene Rätsel können nicht mehr korrigiert werden – starte ein <b>neues Rätsel</b> und versuche es nochmals.`;
+  $('winTip').style.display='none';
+  $('btnWinNew').textContent='Neues Rätsel';$('btnWinClose').textContent='Fehler ansehen';
+  $('overlay').classList.add('show');
+  showMsg('Abgegeben – nicht richtig gelöst: Die roten Felder sind falsch. Korrigieren ist nicht mehr möglich – starte ein neues Rätsel.','warn');
+}
+function win(){
+  $('winTip').style.display='';$('btnWinNew').textContent='Nächstes Rätsel';$('btnWinClose').textContent='Schliessen';
+  puz.finish();stopTimer();
+  $('winText').innerHTML=`${def.name} · Niveau: <b>${tagOf(settings.size,settings.lvl)}</b><br>Zeit: <b>${fmt(elapsed())}</b><br>${puz.winInfo?puz.winInfo()+'<br>':''}Tipps: <b>${tips} von ${tipLimit()}</b>`;
+  if(solUsed){$('winTitle').textContent='⚠ Gelöst – aber mit Lösung';$('winText').innerHTML+='<br><b style="color:var(--bad)">Die Lösung wurde angezeigt – das zählt nicht als selbst gelöst.</b>';}
+  else $('winTitle').textContent='🎉 Geschafft!';
+  refreshTools();
+  $('overlay').classList.add('show');
+  showMsg(solUsed?'Gelöst – aber die Lösung wurde vorher angezeigt.':`Gelöst in ${fmt(elapsed())} mit ${tips} Tipps.`,solUsed?'warn':'good');
+}
+function toggleNotes(){
+  if(def.tools.undo){if(puz)puz.undo();return;}
+  if(!def.tools.notes)return;
+  noteMode=!noteMode;
+  $('btnNotes').textContent=(def.tools.notesLabel||'✎ Notizen')+': '+(noteMode?'ein':'aus');
+  $('btnNotes').classList.toggle('on',noteMode);
+}
+
+/* Ereignisse */
+$('btnNew').addEventListener('click',startGame);
+$('btnBack').addEventListener('click',()=>{if(puz&&!puz.done&&!puz.locked&&!solUsed&&!confirm('Das laufende Rätsel wird verworfen. Zu den Einstellungen wechseln?'))return;showSetup();});
+$('btnCheck').addEventListener('click',check);
+$('btnSubmit').addEventListener('click',submitPuz);
+$('btnHint').addEventListener('click',hint);
+$('btnReset').addEventListener('click',resetGame);
+$('btnSolve').addEventListener('click',showSolution);
+$('btnPrint').addEventListener('click',()=>{if(puz){puz.clearSelection();}window.print();});
+$('btnNotes').addEventListener('click',toggleNotes);
+$('btnWinNew').addEventListener('click',()=>{$('overlay').classList.remove('show');showSetup();});
+$('btnWinClose').addEventListener('click',()=>$('overlay').classList.remove('show'));
+$('autoCheck').addEventListener('change',()=>{if(puz)puz.applyAutoCheck($('autoCheck').checked);});
+
+document.addEventListener('keydown',e=>{
+  if($('overlay').classList.contains('show')||!puz)return;
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target;
+  if(e.key===' '&&t&&t.closest&&t.closest('button,input,summary,select,textarea'))return;   // Leertaste bedient dann das Bedienelement
+  if((e.key==='n'||e.key==='N')&&def.tools.notes&&!def.tools.undo){toggleNotes();return;}
+  if((e.key==='z'||e.key==='Z'||e.key==='Backspace')&&def.tools.undo&&puz.undo){puz.undo();e.preventDefault();return;}
+  if(puz.keydown(e))e.preventDefault();
+});
+
+/* Einbettung: Höhe an die Plattform melden */
+function setupEmbed(){
+  document.body.classList.add('embed');
+  if(window.parent===window)return;
+  const send=()=>window.parent.postMessage({type:'raetsel-height',id:def.id,h:Math.ceil(document.body.getBoundingClientRect().height)},'*');
+  if(window.ResizeObserver)new ResizeObserver(send).observe(document.body);
+  window.addEventListener('load',send);
+  send();
+}
+
+/* Start */
+(function init(){
+  loadStore();
+  $('gameTitle').textContent=def.title;
+  $('sub').textContent=def.intro;
+  $('newTitle').textContent=def.newLabel||'Neues '+def.name;
+  $('btnNew').textContent='Rätsel erstellen';
+  $('sizeLbl').textContent=def.sizeTitle||'Grösse';
+  if(def.tools.undo)$('btnNotes').textContent='↶ Zug zurück';
+  else if(def.tools.notesLabel)$('btnNotes').textContent=def.tools.notesLabel+': aus';
+  if(def.tools.auto===false)$('autoCheck').parentElement.style.display='none';
+  if(def.tools.legend===false)document.querySelector('.legend').style.display='none';
+  $('rulesTitle').textContent='So geht '+def.name;
+  $('btnNotes').style.display=(def.tools.notes||def.tools.undo)?'':'none';
+  $('btnHint').classList.toggle('full',!(def.tools.notes||def.tools.undo));
+  document.title=def.title+' – Rätsel-Trainer';
+  if(EMBED)setupEmbed();
+  buildOptions();
+  showSetup();
+})();
+
+</script>
+</body>
+</html>
